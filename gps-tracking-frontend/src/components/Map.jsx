@@ -5,6 +5,10 @@ import { io } from "socket.io-client";
 const socket = io("http://localhost:3000");
 
 const containerStyle = { width: "100%", height: "500px" };
+const polylineStyle = { 
+  strokeColor: import.meta.env.STOKE_COLOR,
+  strokeWeight: import.meta.env.STOKE_WEIGHT
+}
 
 const Map = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -86,11 +90,7 @@ const Map = () => {
           {/* Draw movement path */}
           <Polyline
             path={path}
-            options={{
-              strokeColor: "#0000FF",
-              strokeOpacity: 1,
-              strokeWeight: 3,
-            }}
+            options={ polylineStyle }
           />
         </GoogleMap>
       </LoadScript>
