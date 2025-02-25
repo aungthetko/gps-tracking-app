@@ -24,10 +24,10 @@ const io = new Server(server, {
 });
 
 // Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error(err));
+// mongoose
+//   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => console.error(err));
 
 // Socket.IO Connection
 io.on("connection", (socket) => {
