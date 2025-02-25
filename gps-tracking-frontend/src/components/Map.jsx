@@ -10,9 +10,7 @@ const Map = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [tracking, setTracking] = useState(false);
   const [path, setPath] = useState([]);
-  const movementIcon = useRef(null);
-  const trackingRef = useRef(false);
-  const intervalRef = useRef(null);
+  const watchIdRef = useRef(null);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -36,29 +34,28 @@ const Map = () => {
 
   const startTracking = () => {
     setTracking(true);
-    trackingRef.current = true; // Ensure interval has correct tracking state
-    setPath([]); // Reset path for new tracking session
+    setPath([]); // Reset path when starting a new session
 
-    intervalRef.current = setInterval(() => {
-      if ("geolocation" in navigator && trackingRef.current) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const location = { lat: position.coords.latitude, lng: position.coords.longitude };
-            socket.emit("locationUpdate", location); // Send to backend
-            setPath((prevPath) => [...prevPath, location]); // Update polyline path
-            setCurrentLocation(location); // Move marker
-          },
-          (error) => console.error("Tracking error:", error),
-          { enableHighAccuracy: true }
-        );
-      }
-    }, 3000);
+    if ("geolocation" in navigator) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+          socket.emit("locationUpdate", location); // Send to backend
+          setPath((prevPath) => [...prevPath, location]); // Update polyline path
+          setCurrentLocation(location); // Move marker
+        },
+        (error) => console.error("Tracking error:", error),
+        { enableHighAccuracy: true }
+      );
+    }
   };
 
   const stopTracking = () => {
     setTracking(false);
-    trackingRef.current = false;
-    clearInterval(intervalRef.current);
+    if (watchIdRef.current !== null && "geolocation" in navigator) {
+      navigator.geolocation.clearWatch(watchIdRef.current); // Stop GPS tracking
+      watchIdRef.current = null;
+    }
   };
 
   return (
