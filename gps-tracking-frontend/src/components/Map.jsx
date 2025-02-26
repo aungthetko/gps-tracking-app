@@ -5,10 +5,23 @@ import { io } from "socket.io-client";
 const socket = io("http://localhost:3000");
 
 const containerStyle = { width: "100%", height: "500px" };
-const polylineStyle = { 
-  strokeColor: import.meta.env.STOKE_COLOR,
-  strokeWeight: import.meta.env.STOKE_WEIGHT
-}
+const MIN_DISTANCE = 5; // Minimum movement in meters to update path
+
+const haversineDistance = (coord1, coord2) => {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRad(coord2.lat - coord1.lat);
+  const dLon = toRad(coord2.lng - coord1.lng);
+  const lat1 = toRad(coord1.lat);
+  const lat2 = toRad(coord2.lat);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in meters
+};
 
 const Map = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -24,7 +37,8 @@ const Map = () => {
           setCurrentLocation(location);
           setPath([location]); // Initialize path
         },
-        (error) => console.error("Error getting location:", error)
+        (error) => console.error("Error getting location:", error),
+        { enableHighAccuracy: true }
       );
     }
 
@@ -43,10 +57,26 @@ const Map = () => {
     if ("geolocation" in navigator) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
-          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
-          socket.emit("locationUpdate", location); // Send to backend
-          setPath((prevPath) => [...prevPath, location]); // Update polyline path
-          setCurrentLocation(location); // Move marker
+          const newLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+
+          if (position.coords.accuracy > 20) {
+            console.warn("Ignoring inaccurate location:", position.coords.accuracy);
+            return;
+          }
+
+          if (path.length > 0) {
+            const lastLocation = path[path.length - 1];
+            const distance = haversineDistance(lastLocation, newLocation);
+
+            if (distance < MIN_DISTANCE) {
+              console.log("Skipping small movement:", distance);
+              return;
+            }
+          }
+
+          socket.emit("locationUpdate", newLocation); // Send to backend
+          setPath((prevPath) => [...prevPath, newLocation]); // Update polyline path
+          setCurrentLocation(newLocation); // Move marker
         },
         (error) => console.error("Tracking error:", error),
         { enableHighAccuracy: true }
@@ -90,7 +120,11 @@ const Map = () => {
           {/* Draw movement path */}
           <Polyline
             path={path}
-            options={ polylineStyle }
+            options={{
+              strokeColor: "#0000FF",
+              strokeOpacity: 1,
+              strokeWeight: 3,
+            }}
           />
         </GoogleMap>
       </LoadScript>
