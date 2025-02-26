@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { GoogleMap, LoadScript, Marker, Polyline } from "@react-google-maps/api";
 import { io } from "socket.io-client";
+import makerIcon from  "../icon/postman.png";
 
 const socket = io("http://localhost:3000");
 
@@ -16,9 +17,9 @@ const haversineDistance = (coord1, coord2) => {
   const lat2 = toRad(coord2.lat);
 
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
+    Math.cos(lat1) * Math.cos(lat2) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in meters
 };
@@ -41,7 +42,6 @@ const Map = () => {
         { enableHighAccuracy: true }
       );
     }
-
     socket.on("newLocation", (data) => {
       setPath((prevPath) => [...prevPath, data]);
       setCurrentLocation(data);
@@ -111,19 +111,28 @@ const Map = () => {
             <Marker
               position={currentLocation}
               icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                scaledSize: new window.google.maps.Size(40, 40),
+                url: makerIcon,
+                scaledSize: new window.google.maps.Size(30, 30),
               }}
             />
           )}
 
-          {/* Draw movement path */}
           <Polyline
             path={path}
             options={{
-              strokeColor: "#0000FF",
+              strokeColor: "#FFFFFF",
+              strokeOpacity: 0.5,
+              strokeWeight: 10,
+              geodesic: true
+            }}
+          />
+          <Polyline
+            path={path}
+            options={{
+              strokeColor: "#4285F4",
               strokeOpacity: 1,
-              strokeWeight: 3,
+              strokeWeight: 6,
+              geodesic: true,
             }}
           />
         </GoogleMap>
