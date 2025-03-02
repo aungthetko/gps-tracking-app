@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { GoogleMap, LoadScript, Marker, Polyline } from "@react-google-maps/api";
 import { io } from "socket.io-client";
 import makerIcon from  "../icon/postman.png";
+import { toast, ToastContainer } from "react-toastify";
 
 const socket = io("http://localhost:3000");
 
 const containerStyle = { width: "100%", height: "500px" };
-const MIN_DISTANCE = 5; // Minimum movement in meters to update path
+const MIN_DISTANCE = 5;
 
 const haversineDistance = (coord1, coord2) => {
   const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const dLat = toRad(coord2.lat - coord1.lat);
   const dLon = toRad(coord2.lng - coord1.lng);
   const lat1 = toRad(coord1.lat);
@@ -53,17 +54,16 @@ const Map = () => {
   const startTracking = () => {
     setTracking(true);
     setPath([]); // Reset path when starting a new session
+    toast.success("Tracking Started");
 
     if ("geolocation" in navigator) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-
           if (position.coords.accuracy > 20) {
             console.warn("Ignoring inaccurate location:", position.coords.accuracy);
             return;
           }
-
           if (path.length > 0) {
             const lastLocation = path[path.length - 1];
             const distance = haversineDistance(lastLocation, newLocation);
@@ -73,10 +73,9 @@ const Map = () => {
               return;
             }
           }
-
-          socket.emit("locationUpdate", newLocation); // Send to backend
-          setPath((prevPath) => [...prevPath, newLocation]); // Update polyline path
-          setCurrentLocation(newLocation); // Move marker
+          socket.emit("locationUpdate", newLocation);
+          setPath((prevPath) => [...prevPath, newLocation]);
+          setCurrentLocation(newLocation);
         },
         (error) => console.error("Tracking error:", error),
         { enableHighAccuracy: true }
@@ -86,8 +85,9 @@ const Map = () => {
 
   const stopTracking = () => {
     setTracking(false);
+    toast.error("Tracking Stopped");
     if (watchIdRef.current !== null && "geolocation" in navigator) {
-      navigator.geolocation.clearWatch(watchIdRef.current); // Stop GPS tracking
+      navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
   };
@@ -100,7 +100,7 @@ const Map = () => {
       <button onClick={stopTracking} style={{ padding: "8px 15px", cursor: "pointer" }}>
         Stop Tracking
       </button>
-
+      <ToastContainer  position= "top-right" autoclose = {3000} />
       <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
         <GoogleMap
           mapContainerStyle={containerStyle}

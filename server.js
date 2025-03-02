@@ -18,25 +18,36 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Allow frontend access
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST"],
   },
 });
 
-// Connect to MongoDB
-// mongoose
-//   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-//   .then(() => console.log("MongoDB connected"))
-//   .catch((err) => console.error(err));
+mongoose
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error(err));
 
-// Socket.IO Connection
+const locationSchema = new mongoose.Schema({
+  lat: Number,
+  lng: Number,
+  timeStamp: { type : Date, default : Date.now }
+});
+const Location = mongoose.model("Location", locationSchema);
+
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  socket.on("locationUpdate", (data) => {
+  socket.on("locationUpdate", async (data) => {
     console.log("Received location:", data);
-    io.emit("newLocation", data); // Broadcast new location to all clients
+    await Location.create(data);
+    io.emit("newLocation", data);
   });
+
+  socket.on("getPreviousPath", async (callback) => {
+    const locations = await Location.find().sort({ timestamp: 1 }).limit(50);
+    callback(locations);
+  })
 
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
